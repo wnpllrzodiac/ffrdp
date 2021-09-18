@@ -1,13 +1,28 @@
+#ifdef WIN32
 #include <windows.h>
+#endif
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h> // for strncpy
 #include <pthread.h>
 #include "ffrdp.h"
 
+#ifdef WIN32
 #pragma warning(disable:4996) // disable warnings
 #define usleep(t) Sleep((t) / 1000)
 #define get_tick_count GetTickCount
+#define mystricmp stricmp
+#else
+#define mystricmp strcasecmp
+unsigned long get_tick_count()
+{
+	struct timespec ts;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	return (ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
+
+}
+#endif
 
 static int  g_exit = 0;
 static char server_bind_ip[32]   = "0.0.0.0";
@@ -171,8 +186,15 @@ int main(int argc, char *argv[])
         }
     }
 
-    strtok_s(server_bind_ip, ":", &str); if (str && *str) server_bind_port = atoi(str);
-    strtok_s(client_cnnt_ip, ":", &str); if (str && *str) client_cnnt_port = atoi(str);
+#ifdef _WIN32
+	strtok_s(server_bind_ip, ":", &str); if (str && *str) server_bind_port = atoi(str);
+	strtok_s(client_cnnt_ip, ":", &str); if (str && *str) client_cnnt_port = atoi(str);
+#else
+	str = server_bind_ip;
+	strsep(&str, ":"); if (str && *str) server_bind_port = atoi(str);
+	str = client_cnnt_ip;
+	strsep(&str, ":"); if (str && *str) client_cnnt_port = atoi(str);
+#endif
     if (server_en) {
         printf("server bind ip      : %s\n", server_bind_ip      );
         printf("server bind port    : %d\n", server_bind_port    );
@@ -191,7 +213,7 @@ int main(int argc, char *argv[])
     while (!g_exit) {
         char cmd[256];
         scanf("%256s", cmd);
-        if (stricmp(cmd, "quit") == 0 || stricmp(cmd, "exit") == 0) {
+        if (mystricmp(cmd, "quit") == 0 || mystricmp(cmd, "exit") == 0) {
             g_exit = 1;
         }
     }
